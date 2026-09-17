@@ -1,11 +1,12 @@
 package handler
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"phishing-quest/core/usecase"
 	"phishing-quest/domain"
 	"phishing-quest/dto"
+
+	"github.com/gin-gonic/gin"
 )
 
 type UserHandler struct {
@@ -29,7 +30,7 @@ func (uh *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	c.JSON(http.StatusOK, user.ToDTO())
 }
 
 func (uh *UserHandler) Login(c *gin.Context) {

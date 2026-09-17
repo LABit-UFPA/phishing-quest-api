@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"phishing-quest/dto"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -25,4 +26,15 @@ func (u *User) TableName() string {
 func (u *User) Validate() error {
 	validate := validator.New()
 	return validate.Struct(u)
+}
+
+// ToDTO converte para o formato seguro de resposta, sem senha em texto
+// puro nem hash. Deve ser usado em qualquer endpoint que devolve um User.
+func (u *User) ToDTO() *dto.UserResponseDTO {
+	return &dto.UserResponseDTO{
+		Id:         u.Id,
+		Username:   u.Username,
+		Email:      u.Email,
+		TotalScore: u.TotalScore,
+	}
 }
