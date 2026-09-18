@@ -2,6 +2,7 @@ package tests
 
 import (
 	"testing"
+	"time"
 
 	"phishing-quest/domain"
 
@@ -77,4 +78,50 @@ func TestQuestion_Validate_AindaExigeCategoryIdEQuestionText(t *testing.T) {
 	err := question.Validate()
 
 	assert.Error(t, err)
+}
+
+// TestReviewSchedule_ApplyResult_AcertoAvancaCaixa garante o
+// comportamento central do algoritmo Leitner (issue #27): uma
+// resposta correta avanca a pista para a proxima caixa, aumentando o
+// intervalo de revisao (regressao espacada).
+func TestReviewSchedule_ApplyResult_AcertoAvancaCaixa(t *testing.T) {
+	rs := &domain.ReviewSchedule{Box: domain.MinLeitnerBox}
+	now := time.Now()
+
+	rs.ApplyResult(true, now)
+
+	assert.Equal(t, 2, rs.Box)
+	assert.NotNil(t, rs.LastResult)
+	assert.True(t, *rs.LastResult)
+	// Caixa 2 tem intervalo de 1 dia (domain.LeitnerIntervalDays).
+	assert.WithinDuration(t, now.AddDate(0, 0, 1), rs.DueAt, time.Second)
+}
+
+// TestReviewSchedule_ApplyResult_ErroVoltaParaCaixaUm garante que um
+// erro sempre reseta a pista para a caixa 1 (revisao quase imediata),
+// independentemente de quao avancada ela estava — e o criterio de
+// aceite explicito da issue #27: "item errado reaparece antes".
+func TestReviewSchedule_ApplyResult_ErroVoltaParaCaixaUm(t *testing.T) {
+	rs := &domain.ReviewSchedule{Box: 4}
+	now := time.Now()
+
+	rs.ApplyResult(false, now)
+
+	assert.Equal(t, domain.MinLeitnerBox, rs.Box)
+	assert.NotNil(t, rs.LastResult)
+	assert.False(t, *rs.LastResult)
+	// Caixa 1 tem intervalo 0 (devido imediatamente).
+	assert.WithinDuration(t, now, rs.DueAt, time.Second)
+}
+
+// TestReviewSchedule_ApplyResult_NaoPassaDaCaixaMaxima garante que a
+// caixa nunca excede domain.MaxLeitnerBox mesmo apos varios acertos
+// consecutivos.
+func TestReviewSchedule_ApplyResult_NaoPassaDaCaixaMaxima(t *testing.T) {
+	rs := &domain.ReviewSchedule{Box: domain.MaxLeitnerBox}
+	now := time.Now()
+
+	rs.ApplyResult(true, now)
+
+	assert.Equal(t, domain.MaxLeitnerBox, rs.Box)
 }

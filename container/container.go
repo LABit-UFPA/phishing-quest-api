@@ -73,6 +73,10 @@ type Container struct {
 	UserStatsRepo    *repository.IUserStatsRepository
 	UserStatsUseCase *usecase.UserStatsUseCase
 	UserStatsHandler *handler.UserStatsHandler
+
+	ReviewScheduleRepo    *repository.IReviewScheduleRepository
+	ReviewScheduleUseCase *usecase.ReviewScheduleUseCase
+	ReviewScheduleHandler *handler.ReviewScheduleHandler
 }
 
 func NewContainer() *Container {
@@ -123,9 +127,16 @@ func NewContainer() *Container {
 	cueUseCase := usecase.NewCueUseCase(cueRepo, itemCueRepo, itemRepo)
 	cueHandler := handler.NewCueHandler(cueUseCase)
 
+	// reviewScheduleUseCase precisa existir antes de attemptUseCase,
+	// que o usa para atualizar a fila de revisao espacada a cada
+	// tentativa registrada.
+	reviewScheduleRepo := repository.NewReviewScheduleRepository(db)
+	reviewScheduleUseCase := usecase.NewReviewScheduleUseCase(reviewScheduleRepo, itemCueRepo)
+	reviewScheduleHandler := handler.NewReviewScheduleHandler(reviewScheduleUseCase)
+
 	attemptRepo := repository.NewAttemptRepository(db)
 	consentRepo := repository.NewStudyParticipantRepository(db)
-	attemptUseCase := usecase.NewAttemptUseCase(attemptRepo, itemRepo, consentRepo)
+	attemptUseCase := usecase.NewAttemptUseCase(attemptRepo, itemRepo, consentRepo, reviewScheduleUseCase)
 	attemptHandler := handler.NewAttemptHandler(attemptUseCase)
 
 	telemetryRepo := repository.NewTelemetryEventRepository(db)
@@ -207,5 +218,9 @@ func NewContainer() *Container {
 		UserStatsRepo:    &userStatsRepo,
 		UserStatsUseCase: userStatsUseCase,
 		UserStatsHandler: userStatsHandler,
+
+		ReviewScheduleRepo:    &reviewScheduleRepo,
+		ReviewScheduleUseCase: reviewScheduleUseCase,
+		ReviewScheduleHandler: reviewScheduleHandler,
 	}
 }

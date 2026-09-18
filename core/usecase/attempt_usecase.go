@@ -27,13 +27,24 @@ func assignCondition() string {
 }
 
 type AttemptUseCase struct {
-	attemptRepo repository.IAttemptRepository
-	itemRepo    repository.IItemRepository
-	consentRepo repository.IStudyParticipantRepository
+	attemptRepo      repository.IAttemptRepository
+	itemRepo         repository.IItemRepository
+	consentRepo      repository.IStudyParticipantRepository
+	reviewScheduleUC *ReviewScheduleUseCase
 }
 
-func NewAttemptUseCase(attemptRepo repository.IAttemptRepository, itemRepo repository.IItemRepository, consentRepo repository.IStudyParticipantRepository) *AttemptUseCase {
-	return &AttemptUseCase{attemptRepo: attemptRepo, itemRepo: itemRepo, consentRepo: consentRepo}
+func NewAttemptUseCase(
+	attemptRepo repository.IAttemptRepository,
+	itemRepo repository.IItemRepository,
+	consentRepo repository.IStudyParticipantRepository,
+	reviewScheduleUC *ReviewScheduleUseCase,
+) *AttemptUseCase {
+	return &AttemptUseCase{
+		attemptRepo:      attemptRepo,
+		itemRepo:         itemRepo,
+		consentRepo:      consentRepo,
+		reviewScheduleUC: reviewScheduleUC,
+	}
 }
 
 // RegisterAttempt valida consentimento e a existencia do item antes de
@@ -81,7 +92,22 @@ func (auc *AttemptUseCase) RegisterAttempt(attemptRequest *domain.Attempt) (*dom
 		return nil, err
 	}
 
-	return auc.attemptRepo.Create(attempt)
+	created, err := auc.attemptRepo.Create(attempt)
+	if err != nil {
+		return nil, err
+	}
+
+	// Atualiza a fila de revisao espacada (Leitner) para cada pista do
+	// item respondido. Deliberadamente NAO propaga erro: a tentativa
+	// ja foi gravada com sucesso (o dado de pesquisa esta seguro) e a
+	// fila de revisao e uma funcionalidade secundaria — uma falha aqui
+	// (ex.: item sem pistas anotadas ainda) nao deve fazer o usuario
+	// perder a tentativa que acabou de submeter.
+	if created.IsCorrect != nil && auc.reviewScheduleUC != nil {
+		_ = auc.reviewScheduleUC.RecordOutcome(created.UserId, created.ItemId, *created.IsCorrect)
+	}
+
+	return created, nil
 }
 
 func (auc *AttemptUseCase) ListAttemptsByUser(userID uuid.UUID) ([]*domain.Attempt, error) {
