@@ -1,0 +1,136 @@
+name: CI (PR e main)
+
+# O workflow_ci.yml existente dispara SO em tag (v*.*.*) e roda em
+# runner self-hosted — ou seja, nao gatilha em pull request e nunca
+# funcionou como portao de merge. Este workflow cobre essa lacuna
+# (issue #31): roda em runner hospedado pelo GitHub, em todo PR e em
+# todo push para main.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancela execucoes antigas do mesmo PR quando um novo commit chega,
+# para nao gastar runner com codigo ja superado.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    name: Formatacao, vet e build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Baixar dependencias
+        run: go mod download
+
+      # gofmt -l lista arquivos fora do padrao; a build falha se a lista
+      # nao vier vazia. Sem isso o CI passaria com codigo desformatado.
+      - name: Checar formatacao (gofmt)
+        run: |
+          arquivos_desformatados=$(gofmt -l .)
+          if [ -n "$arquivos_desformatados" ]; then
+            echo "Arquivos fora do padrao gofmt:"
+            echo "$arquivos_desformatados"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      # Inclui a tag integration para garantir que os testes de
+      # integracao tambem compilam, mesmo neste job que nao os executa.
+      - name: go vet (testes de integracao)
+        run: go vet -tags=integration ./tests/integration/
+
+      - name: Build
+        run: go build ./...
+
+  unit-tests:
+    name: Testes unitarios
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Rodar testes unitarios
+        run: go test ./... -count=1
+
+  integration-tests:
+    name: Testes de integracao (Postgres efemero)
+    runs-on: ubuntu-latest
+
+    # Banco de teste efemero exigido pela issue: sobe junto com o job e
+    # morre com ele, sem estado compartilhado entre execucoes.
+    services:
+      postgres:
+        image: postgres:16.4
+        env:
+          POSTGRES_DB: phishing_quest
+          POSTGRES_USER: labsc
+          POSTGRES_PASSWORD: phishingquest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U labsc -d phishing_quest"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: labsc
+      DB_PASSWORD: phishingquest
+      DB_NAME: phishing_quest
+      DB_SSLMODE: disable
+      JWT_SECRET: segredo-de-ci-nao-usar-em-producao
+      RESEARCH_EXPORT_SALT: salt-de-ci-nao-usar-em-producao
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      # Usa a MESMA imagem e os MESMOS changelogs do docker-compose e do
+      # ambiente real, entao uma migration quebrada reprova o CI — foi
+      # exatamente esse tipo de falha que apareceu na issue #30.
+      - name: Aplicar migrations (flyway)
+        run: |
+          docker run --rm --network host \
+            -v "${{ github.workspace }}/migrate/changelogs:/flyway/sql" \
+            flyway/flyway:7.0.2 \
+            -url=jdbc:postgresql://localhost:5432/phishing_quest \
+            -user=labsc \
+            -password=phishingquest \
+            -schemas=phishing_quest \
+            -locations=filesystem:/flyway/sql \
+            -connectRetries=30 \
+            migrate
+
+      - name: Rodar testes de integracao
+        run: go test -tags=integration ./tests/integration/ -count=1 -v
