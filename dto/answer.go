@@ -13,14 +13,17 @@ type AnswerDTO struct {
 	IsCorrect  bool      `json:"isCorrect"`
 }
 
+// SubmitAnswerDTO e AnswerResultDTO usam camelCase, alinhado com a
+// convencao do resto da API (categoryName, questionText, isCorrect,
+// userId...). Antes desta mudanca eram os unicos DTOs em snake_case.
 type SubmitAnswerDTO struct {
-	UserID     uuid.UUID `json:"user_id" binding:"required"`
-	QuestionID uuid.UUID `json:"question_id" binding:"required"`
-	AnswerID   uuid.UUID `json:"answer_id" binding:"required"`
+	UserID     uuid.UUID `json:"userId" binding:"required"`
+	QuestionID uuid.UUID `json:"questionId" binding:"required"`
+	AnswerID   uuid.UUID `json:"answerId" binding:"required"`
 }
 
 type AnswerResultDTO struct {
-	IsCorrect  bool   `json:"is_correct"`
+	IsCorrect  bool   `json:"isCorrect"`
 	Message    string `json:"message"`
-	TotalScore int    `json:"total_score"`
+	TotalScore int    `json:"totalScore"`
 }
