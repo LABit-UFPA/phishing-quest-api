@@ -72,7 +72,7 @@ func NewContainer() *Container {
 	userAnswerUseCase := usecase.NewUserAnswerUseCase(userAnswerRepo)
 	userAnswerHandler := handler.NewUserAnswerHandler(userAnswerUseCase)
 
-	gameUseCase := usecase.NewGameUseCase(answerRepo, userRepo, userScoreRepo)
+	gameUseCase := usecase.NewGameUseCase(answerRepo, userRepo, userScoreRepo, userAnswerRepo)
 	gameHandler := handler.NewGameHandler(gameUseCase)
 
 	rankingRepo := repository.NewRankingRepository(db)

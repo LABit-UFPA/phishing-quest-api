@@ -20,6 +20,7 @@ type SubmitAnswerDTO struct {
 }
 
 type AnswerResultDTO struct {
-	IsCorrect bool   `json:"is_correct"`
-	Message   string `json:"message"`
+	IsCorrect  bool   `json:"is_correct"`
+	Message    string `json:"message"`
+	TotalScore int    `json:"total_score"`
 }
