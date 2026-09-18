@@ -55,6 +55,10 @@ type Container struct {
 	ConsentRepo    *repository.IStudyParticipantRepository
 	AttemptUseCase *usecase.AttemptUseCase
 	AttemptHandler *handler.AttemptHandler
+
+	TelemetryRepo    *repository.ITelemetryEventRepository
+	TelemetryUseCase *usecase.TelemetryUseCase
+	TelemetryHandler *handler.TelemetryHandler
 }
 
 func NewContainer() *Container {
@@ -107,6 +111,10 @@ func NewContainer() *Container {
 	attemptUseCase := usecase.NewAttemptUseCase(attemptRepo, itemRepo, consentRepo)
 	attemptHandler := handler.NewAttemptHandler(attemptUseCase)
 
+	telemetryRepo := repository.NewTelemetryEventRepository(db)
+	telemetryUseCase := usecase.NewTelemetryUseCase(telemetryRepo)
+	telemetryHandler := handler.NewTelemetryHandler(telemetryUseCase)
+
 	return &Container{
 		DB:          db,
 		JWTService:  jwtService,
@@ -152,5 +160,9 @@ func NewContainer() *Container {
 		ConsentRepo:    &consentRepo,
 		AttemptUseCase: attemptUseCase,
 		AttemptHandler: attemptHandler,
+
+		TelemetryRepo:    &telemetryRepo,
+		TelemetryUseCase: telemetryUseCase,
+		TelemetryHandler: telemetryHandler,
 	}
 }
