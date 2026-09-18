@@ -27,6 +27,7 @@
 # Arquivos de configuração local
 .env
 .env.*
+!.env.example
 
 # Arquivos binários gerados
 *.o

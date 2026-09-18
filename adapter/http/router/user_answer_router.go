@@ -1,12 +1,16 @@
 package router
 
 import (
-	"github.com/gin-gonic/gin"
 	"phishing-quest/adapter/http/handler"
+
+	"github.com/gin-gonic/gin"
 )
 
-func SetupUserAnswerRoutes(router *gin.Engine, userAnswerHandler *handler.UserAnswerHandler) {
+// SetupUserAnswerRoutes registra as rotas de historico de respostas.
+// authRequired exige usuario logado em todo o grupo.
+func SetupUserAnswerRoutes(router *gin.Engine, userAnswerHandler *handler.UserAnswerHandler, authRequired gin.HandlerFunc) {
 	userAnswersGroup := router.Group("api/v1/user-answers")
+	userAnswersGroup.Use(authRequired)
 	{
 		userAnswersGroup.POST("", userAnswerHandler.CreateUserAnswer)
 		userAnswersGroup.GET("", userAnswerHandler.ListUserAnswers)

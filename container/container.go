@@ -1,15 +1,18 @@
 package container
 
 import (
-	"gorm.io/gorm"
 	"phishing-quest/adapter/http/handler"
 	"phishing-quest/adapter/repository"
+	"phishing-quest/core/service"
 	"phishing-quest/core/usecase"
 	"phishing-quest/postgres"
+
+	"gorm.io/gorm"
 )
 
 type Container struct {
 	DB          *gorm.DB
+	JWTService  service.IJWTService
 	UserRepo    *repository.IUserRepository
 	UserUseCase *usecase.UserUseCase
 	UserHandler *handler.UserHandler
@@ -42,9 +45,10 @@ type Container struct {
 
 func NewContainer() *Container {
 	db := postgres.InitDB()
+	jwtService := service.NewJWTService()
 
 	userRepo := repository.NewUserRepository(db)
-	userUseCase := usecase.NewUserUseCase(userRepo)
+	userUseCase := usecase.NewUserUseCase(userRepo, jwtService)
 	userHandler := handler.NewUserHandler(userUseCase)
 
 	categoryRepo := repository.NewCategoryRepository(db)
@@ -74,6 +78,7 @@ func NewContainer() *Container {
 
 	return &Container{
 		DB:          db,
+		JWTService:  jwtService,
 		UserRepo:    &userRepo,
 		UserUseCase: userUseCase,
 		UserHandler: userHandler,

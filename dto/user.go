@@ -8,6 +8,7 @@ type UserLoginDTO struct {
 }
 
 type UserLoginResponseDTO struct {
+	Token      string    `json:"token"`
 	Id         uuid.UUID `json:"id"`
 	Username   string    `json:"username"`
 	Email      string    `json:"email"`
