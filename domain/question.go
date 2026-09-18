@@ -1,16 +1,21 @@
 package domain
 
 import (
+	"phishing-quest/dto"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
-	"phishing-quest/dto"
 )
 
+// Question nao tem mais o campo CorrectAnswer: a coluna correct_answer
+// foi removida pela migration V20250104153937 (a "resposta correta" e
+// modelada por Answer.IsCorrect, associada via QuestionId). Manter o
+// campo no struct fazia o GORM tentar ler/escrever uma coluna
+// inexistente em qualquer create/update de questao.
 type Question struct {
-	Id            uuid.UUID `json:"id" gorm:"primaryKey"`
-	CategoryId    uuid.UUID `json:"categoryId" validate:"required"`
-	QuestionText  string    `json:"questionText" validate:"required"`
-	CorrectAnswer string    `json:"correctAnswer" validate:"required"`
+	Id           uuid.UUID `json:"id" gorm:"primaryKey"`
+	CategoryId   uuid.UUID `json:"categoryId" validate:"required"`
+	QuestionText string    `json:"questionText" validate:"required"`
 }
 
 func (q *Question) TableName() string {

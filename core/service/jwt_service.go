@@ -26,8 +26,8 @@ type IJWTService interface {
 }
 
 type JWTService struct {
-	secret        []byte
-	expiresIn     time.Duration
+	secret    []byte
+	expiresIn time.Duration
 }
 
 // NewJWTService le JWT_SECRET e JWT_EXPIRES_IN do ambiente. JWT_SECRET e
