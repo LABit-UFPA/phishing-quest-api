@@ -12,6 +12,7 @@ type UserLoginResponseDTO struct {
 	Id         uuid.UUID `json:"id"`
 	Username   string    `json:"username"`
 	Email      string    `json:"email"`
+	Role       string    `json:"role"`
 	TotalScore int       `json:"totalScore"`
 }
 
@@ -21,5 +22,6 @@ type UserResponseDTO struct {
 	Id         uuid.UUID `json:"id"`
 	Username   string    `json:"username"`
 	Email      string    `json:"email"`
+	Role       string    `json:"role"`
 	TotalScore int       `json:"totalScore"`
 }
