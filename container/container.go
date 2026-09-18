@@ -42,9 +42,11 @@ type Container struct {
 	RankingUseCase *usecase.RankingUseCase
 	RankingHandler *handler.RankingHandler
 
-	ItemRepo    *repository.IItemRepository
-	ItemUseCase *usecase.ItemUseCase
-	ItemHandler *handler.ItemHandler
+	ItemRepo             *repository.IItemRepository
+	ItemUseCase          *usecase.ItemUseCase
+	ItemHandler          *handler.ItemHandler
+	ItemSelectionUseCase *usecase.ItemSelectionUseCase
+	ItemSelectionHandler *handler.ItemSelectionHandler
 
 	CueRepo     *repository.ICueRepository
 	ItemCueRepo *repository.IItemCueRepository
@@ -109,6 +111,9 @@ func NewContainer() *Container {
 	itemUseCase := usecase.NewItemUseCase(itemRepo)
 	itemHandler := handler.NewItemHandler(itemUseCase)
 
+	itemSelectionUseCase := usecase.NewItemSelectionUseCase(itemRepo)
+	itemSelectionHandler := handler.NewItemSelectionHandler(itemSelectionUseCase)
+
 	cueRepo := repository.NewCueRepository(db)
 	itemCueRepo := repository.NewItemCueRepository(db)
 	cueUseCase := usecase.NewCueUseCase(cueRepo, itemCueRepo, itemRepo)
@@ -163,9 +168,11 @@ func NewContainer() *Container {
 		RankingUseCase: rankingUseCase,
 		RankingHandler: rankingHandler,
 
-		ItemRepo:    &itemRepo,
-		ItemUseCase: itemUseCase,
-		ItemHandler: itemHandler,
+		ItemRepo:             &itemRepo,
+		ItemUseCase:          itemUseCase,
+		ItemHandler:          itemHandler,
+		ItemSelectionUseCase: itemSelectionUseCase,
+		ItemSelectionHandler: itemSelectionHandler,
 
 		CueRepo:     &cueRepo,
 		ItemCueRepo: &itemCueRepo,

@@ -53,7 +53,7 @@ func (ih *ItemHandler) GetItem(c *gin.Context) {
 
 // ListItems lista todos os itens, opcionalmente filtrados por canal
 // via query param (?channel=email). A selecao balanceada/aleatoria
-// para o fluxo de jogo fica a cargo de GET /items/next (issue #22).
+// para o fluxo de jogo fica a cargo de GET /items/next.
 func (ih *ItemHandler) ListItems(c *gin.Context) {
 	channelParam := c.Query("channel")
 	if channelParam != "" {

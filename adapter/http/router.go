@@ -23,7 +23,7 @@ func SetupRouter(cont *container.Container) *gin.Engine {
 	router.SetupUserAnswerRoutes(r, cont.UserAnswerHandler, authRequired)
 	router.SetupGameRoutes(r, cont.GameHandler, authRequired)
 	router.SetupRankingRoutes(r, cont.RankingHandler)
-	router.SetupItemRoutes(r, cont.ItemHandler)
+	router.SetupItemRoutes(r, cont.ItemHandler, cont.ItemSelectionHandler, authRequired)
 	router.SetupCueRoutes(r, cont.CueHandler)
 	router.SetupAttemptRoutes(r, cont.AttemptHandler, authRequired)
 	router.SetupTelemetryRoutes(r, cont.TelemetryHandler)
