@@ -63,6 +63,10 @@ type Container struct {
 	AssessmentRepo    *repository.IAssessmentRepository
 	AssessmentUseCase *usecase.AssessmentUseCase
 	AssessmentHandler *handler.AssessmentHandler
+
+	ResearchExportRepo    *repository.IResearchExportRepository
+	ResearchExportUseCase *usecase.ResearchExportUseCase
+	ResearchExportHandler *handler.ResearchExportHandler
 }
 
 func NewContainer() *Container {
@@ -123,6 +127,10 @@ func NewContainer() *Container {
 	assessmentUseCase := usecase.NewAssessmentUseCase(assessmentRepo)
 	assessmentHandler := handler.NewAssessmentHandler(assessmentUseCase)
 
+	researchExportRepo := repository.NewResearchExportRepository(db)
+	researchExportUseCase := usecase.NewResearchExportUseCase(researchExportRepo)
+	researchExportHandler := handler.NewResearchExportHandler(researchExportUseCase)
+
 	return &Container{
 		DB:          db,
 		JWTService:  jwtService,
@@ -176,5 +184,9 @@ func NewContainer() *Container {
 		AssessmentRepo:    &assessmentRepo,
 		AssessmentUseCase: assessmentUseCase,
 		AssessmentHandler: assessmentHandler,
+
+		ResearchExportRepo:    &researchExportRepo,
+		ResearchExportUseCase: researchExportUseCase,
+		ResearchExportHandler: researchExportHandler,
 	}
 }

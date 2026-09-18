@@ -4,6 +4,7 @@ import (
 	"phishing-quest/adapter/http/middleware"
 	"phishing-quest/adapter/http/router"
 	"phishing-quest/container"
+	"phishing-quest/domain"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,6 +14,7 @@ func SetupRouter(cont *container.Container) *gin.Engine {
 	r.Use(middleware.CORS())
 
 	authRequired := middleware.AuthRequired(cont.JWTService)
+	requireResearcherRole := middleware.RequireRole(string(domain.RoleResearcher), string(domain.RoleAdmin))
 
 	router.SetupUserRoutes(r, cont.UserHandler)
 	router.SetupCategoryRoutes(r, cont.CategoryHandler)
@@ -26,5 +28,6 @@ func SetupRouter(cont *container.Container) *gin.Engine {
 	router.SetupAttemptRoutes(r, cont.AttemptHandler, authRequired)
 	router.SetupTelemetryRoutes(r, cont.TelemetryHandler)
 	router.SetupAssessmentRoutes(r, cont.AssessmentHandler, authRequired)
+	router.SetupResearchExportRoutes(r, cont.ResearchExportHandler, authRequired, requireResearcherRole)
 	return r
 }

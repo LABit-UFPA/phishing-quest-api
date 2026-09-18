@@ -155,11 +155,12 @@ func TestUserUseCase_Login(t *testing.T) {
 			Username:     "testuser",
 			Email:        "test@example.com",
 			PasswordHash: hash,
+			Role:         domain.RoleParticipant,
 			TotalScore:   10,
 		}
 
 		mockRepo.On("GetByEmail", existingUser.Email).Return(existingUser, nil)
-		mockJWT.On("Generate", existingUser.Id, "player").Return("token-fake-valido", nil)
+		mockJWT.On("Generate", existingUser.Id, string(domain.RoleParticipant)).Return("token-fake-valido", nil)
 
 		loginRequest := &dto.UserLoginDTO{
 			Email:    existingUser.Email,
@@ -242,10 +243,11 @@ func TestUserUseCase_Login(t *testing.T) {
 			Username:     "testuser",
 			Email:        "test@example.com",
 			PasswordHash: hash,
+			Role:         domain.RoleParticipant,
 		}
 
 		mockRepo.On("GetByEmail", existingUser.Email).Return(existingUser, nil)
-		mockJWT.On("Generate", existingUser.Id, "player").Return("", assert.AnError)
+		mockJWT.On("Generate", existingUser.Id, string(domain.RoleParticipant)).Return("", assert.AnError)
 
 		loginRequest := &dto.UserLoginDTO{
 			Email:    existingUser.Email,

@@ -13,10 +13,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// defaultUserRole e usada ate a issue #26 introduzir uma coluna de role
-// persistida em users. Todo usuario autenticado recebe essa role no token.
-const defaultUserRole = "player"
-
 type UserUseCase struct {
 	userRepo   repository.IUserRepository
 	jwtService service.IJWTService
@@ -46,6 +42,7 @@ func (uc *UserUseCase) CreateUser(userRequest *domain.User) (*domain.User, error
 		Email:        userRequest.Email,
 		Password:     userRequest.Password,
 		PasswordHash: hashedPassword,
+		Role:         domain.RoleParticipant,
 		TotalScore:   0,
 		CreatedAt:    time.Now(),
 	}
@@ -73,7 +70,7 @@ func (uc *UserUseCase) Login(userRequest *dto.UserLoginDTO) (*dto.UserLoginRespo
 		return nil, errors.New("senha incorreta")
 	}
 
-	token, err := uc.jwtService.Generate(user.Id, defaultUserRole)
+	token, err := uc.jwtService.Generate(user.Id, string(user.Role))
 	if err != nil {
 		return nil, errors.New("erro ao gerar token de autenticacao")
 	}
@@ -83,6 +80,7 @@ func (uc *UserUseCase) Login(userRequest *dto.UserLoginDTO) (*dto.UserLoginRespo
 		Id:         user.Id,
 		Username:   user.Username,
 		Email:      user.Email,
+		Role:       string(user.Role),
 		TotalScore: user.TotalScore,
 	}
 
