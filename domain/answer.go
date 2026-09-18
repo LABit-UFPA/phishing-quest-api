@@ -1,16 +1,21 @@
 package domain
 
 import (
+	"phishing-quest/dto"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
-	"phishing-quest/dto"
 )
 
 type Answer struct {
 	Id         uuid.UUID `json:"id" gorm:"primaryKey"`
 	QuestionId uuid.UUID `json:"questionId" validate:"required"`
 	AnswerText string    `json:"answerText" validate:"required"`
-	IsCorrect  bool      `json:"isCorrect" validate:"required"`
+	// IsCorrect nao tem a tag "required": o pacote go-playground/validator
+	// trata bool false como valor-zero e reprova a validacao "required",
+	// o que impedia criar respostas incorretas (isCorrect:false) via
+	// POST /api/v1/answers.
+	IsCorrect bool `json:"isCorrect"`
 }
 
 func (a *Answer) TableName() string {

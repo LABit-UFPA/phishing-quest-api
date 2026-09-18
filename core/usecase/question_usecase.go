@@ -1,9 +1,10 @@
 package usecase
 
 import (
-	"github.com/google/uuid"
 	"phishing-quest/adapter/repository"
 	"phishing-quest/domain"
+
+	"github.com/google/uuid"
 )
 
 type QuestionUseCase struct {
@@ -28,10 +29,9 @@ func (quc *QuestionUseCase) GetAnswersByQuestionID(questionID uuid.UUID) ([]*dom
 
 func (quc *QuestionUseCase) CreateQuestion(questionRequest *domain.Question) (*domain.Question, error) {
 	question := &domain.Question{
-		Id:            uuid.New(),
-		CategoryId:    questionRequest.CategoryId,
-		QuestionText:  questionRequest.QuestionText,
-		CorrectAnswer: questionRequest.CorrectAnswer,
+		Id:           uuid.New(),
+		CategoryId:   questionRequest.CategoryId,
+		QuestionText: questionRequest.QuestionText,
 	}
 
 	err := question.Validate()
@@ -67,9 +67,6 @@ func (quc *QuestionUseCase) UpdateQuestion(id uuid.UUID, questionRequest *domain
 	}
 	if questionRequest.QuestionText != "" {
 		question.QuestionText = questionRequest.QuestionText
-	}
-	if questionRequest.CorrectAnswer != "" {
-		question.CorrectAnswer = questionRequest.CorrectAnswer
 	}
 
 	err = question.Validate()
