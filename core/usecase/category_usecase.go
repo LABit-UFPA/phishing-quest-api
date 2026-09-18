@@ -2,10 +2,11 @@ package usecase
 
 import (
 	"errors"
-	"github.com/google/uuid"
-	"gorm.io/gorm"
 	"phishing-quest/adapter/repository"
 	"phishing-quest/domain"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type CategoryUseCase struct {
@@ -13,8 +14,8 @@ type CategoryUseCase struct {
 	questionRepo repository.IQuestionRepository
 }
 
-func NewCategoryUseCase(categoryRepo repository.ICategoryRepository) *CategoryUseCase {
-	return &CategoryUseCase{categoryRepo: categoryRepo}
+func NewCategoryUseCase(categoryRepo repository.ICategoryRepository, questionRepo repository.IQuestionRepository) *CategoryUseCase {
+	return &CategoryUseCase{categoryRepo: categoryRepo, questionRepo: questionRepo}
 }
 
 func (cuc *CategoryUseCase) CreateCategory(categoryRequest *domain.Category) (*domain.Category, error) {
