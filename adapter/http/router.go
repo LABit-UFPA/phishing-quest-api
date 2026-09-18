@@ -10,6 +10,7 @@ import (
 
 func SetupRouter(cont *container.Container) *gin.Engine {
 	r := gin.Default()
+	r.Use(middleware.CORS())
 
 	authRequired := middleware.AuthRequired(cont.JWTService)
 

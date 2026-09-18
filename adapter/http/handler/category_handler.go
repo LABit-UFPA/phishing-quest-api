@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"phishing-quest/adapter/http/response"
 	"phishing-quest/core/usecase"
 	"phishing-quest/domain"
 	"phishing-quest/dto"
@@ -21,13 +22,13 @@ func NewCategoryHandler(cuc *usecase.CategoryUseCase) *CategoryHandler {
 func (ch *CategoryHandler) CreateCategory(c *gin.Context) {
 	var categoryDTO *domain.Category
 	if err := c.ShouldBindJSON(&categoryDTO); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, response.Error(err.Error()))
 		return
 	}
 
 	createdCategory, err := ch.categoryUseCase.CreateCategory(categoryDTO)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, response.Error(err.Error()))
 		return
 	}
 
@@ -37,7 +38,7 @@ func (ch *CategoryHandler) CreateCategory(c *gin.Context) {
 func (ch *CategoryHandler) ListCategory(c *gin.Context) {
 	categories, err := ch.categoryUseCase.ListCategories()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, response.Error(err.Error()))
 		return
 	}
 
@@ -51,13 +52,13 @@ func (ch *CategoryHandler) ListQuestionsByCategory(c *gin.Context) {
 	idParam := c.Param("id")
 	categoryID, err := uuid.Parse(idParam)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Category ID"})
+		c.JSON(http.StatusBadRequest, response.Error("Invalid Category ID"))
 		return
 	}
 
 	questions, err := ch.categoryUseCase.GetQuestionsByCategoryID(categoryID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Answers not found"})
+		c.JSON(http.StatusNotFound, response.Error("Answers not found"))
 		return
 	}
 
@@ -66,10 +67,10 @@ func (ch *CategoryHandler) ListQuestionsByCategory(c *gin.Context) {
 		questionDTOs = append(questionDTOs, question.ToDTO())
 	}
 
-	response := dto.CategoryQuestionsDTO{
+	responseBody := dto.CategoryQuestionsDTO{
 		CategoryId: categoryID,
 		Questions:  questionDTOs,
 	}
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, responseBody)
 }
