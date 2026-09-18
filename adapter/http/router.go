@@ -22,5 +22,6 @@ func SetupRouter(cont *container.Container) *gin.Engine {
 	router.SetupGameRoutes(r, cont.GameHandler, authRequired)
 	router.SetupRankingRoutes(r, cont.RankingHandler)
 	router.SetupItemRoutes(r, cont.ItemHandler)
+	router.SetupCueRoutes(r, cont.CueHandler)
 	return r
 }

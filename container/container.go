@@ -45,6 +45,11 @@ type Container struct {
 	ItemRepo    *repository.IItemRepository
 	ItemUseCase *usecase.ItemUseCase
 	ItemHandler *handler.ItemHandler
+
+	CueRepo     *repository.ICueRepository
+	ItemCueRepo *repository.IItemCueRepository
+	CueUseCase  *usecase.CueUseCase
+	CueHandler  *handler.CueHandler
 }
 
 func NewContainer() *Container {
@@ -87,6 +92,11 @@ func NewContainer() *Container {
 	itemUseCase := usecase.NewItemUseCase(itemRepo)
 	itemHandler := handler.NewItemHandler(itemUseCase)
 
+	cueRepo := repository.NewCueRepository(db)
+	itemCueRepo := repository.NewItemCueRepository(db)
+	cueUseCase := usecase.NewCueUseCase(cueRepo, itemCueRepo, itemRepo)
+	cueHandler := handler.NewCueHandler(cueUseCase)
+
 	return &Container{
 		DB:          db,
 		JWTService:  jwtService,
@@ -122,5 +132,10 @@ func NewContainer() *Container {
 		ItemRepo:    &itemRepo,
 		ItemUseCase: itemUseCase,
 		ItemHandler: itemHandler,
+
+		CueRepo:     &cueRepo,
+		ItemCueRepo: &itemCueRepo,
+		CueUseCase:  cueUseCase,
+		CueHandler:  cueHandler,
 	}
 }
