@@ -95,7 +95,7 @@ func TestUserUseCase_CreateUser(t *testing.T) {
 		mockJWT := new(MockJWTService)
 		uc := usecase.NewUserUseCase(mockRepo, mockJWT)
 
-		userRequest := &domain.User{
+		userRequest := &dto.UserRegisterDTO{
 			Username: "testuser",
 			Email:    "test@example.com",
 			Password: "password123",
@@ -127,7 +127,7 @@ func TestUserUseCase_CreateUser(t *testing.T) {
 
 		mockRepo.On("GetByEmail", existingUser.Email).Return(existingUser, nil)
 
-		userRequest := &domain.User{
+		userRequest := &dto.UserRegisterDTO{
 			Username: "newuser",
 			Email:    "test@example.com",
 			Password: "password123",

@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"phishing-quest/adapter/http/response"
 	"phishing-quest/core/usecase"
-	"phishing-quest/domain"
 	"phishing-quest/dto"
 
 	"github.com/gin-gonic/gin"
@@ -19,8 +18,11 @@ func NewUserHandler(uuc *usecase.UserUseCase) *UserHandler {
 	return &UserHandler{UserUseCase: uuc}
 }
 
+// CreateUser cadastra um usuario. Faz o bind em dto.UserRegisterDTO (nao
+// em domain.User) para a senha em texto puro nao entrar na entidade de
+// dominio — ver issue #60.
 func (uh *UserHandler) CreateUser(c *gin.Context) {
-	var userDTO *domain.User
+	var userDTO *dto.UserRegisterDTO
 	if err := c.ShouldBindJSON(&userDTO); err != nil {
 		c.JSON(http.StatusBadRequest, response.Error(err.Error()))
 		return

@@ -22,7 +22,10 @@ func NewUserUseCase(userRepo repository.IUserRepository, jwtService service.IJWT
 	return &UserUseCase{userRepo: userRepo, jwtService: jwtService}
 }
 
-func (uc *UserUseCase) CreateUser(userRequest *domain.User) (*domain.User, error) {
+// CreateUser recebe o DTO de cadastro (nao a entidade) porque a senha
+// em texto puro nao deve passar pelo dominio: ela e consumida aqui para
+// gerar o hash e nao e copiada para o domain.User (issue #60).
+func (uc *UserUseCase) CreateUser(userRequest *dto.UserRegisterDTO) (*domain.User, error) {
 	existingUser, err := uc.userRepo.GetByEmail(userRequest.Email)
 	if err != nil && !errors.Is(gorm.ErrRecordNotFound, err) {
 		return nil, err
@@ -40,7 +43,6 @@ func (uc *UserUseCase) CreateUser(userRequest *domain.User) (*domain.User, error
 		Id:           uuid.New(),
 		Username:     userRequest.Username,
 		Email:        userRequest.Email,
-		Password:     userRequest.Password,
 		PasswordHash: hashedPassword,
 		Role:         domain.RoleParticipant,
 		TotalScore:   0,
