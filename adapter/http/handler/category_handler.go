@@ -1,12 +1,13 @@
 package handler
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"net/http"
 	"phishing-quest/core/usecase"
 	"phishing-quest/domain"
 	"phishing-quest/dto"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type CategoryHandler struct {
@@ -44,10 +45,13 @@ func (ch *CategoryHandler) ListCategory(c *gin.Context) {
 }
 
 func (ch *CategoryHandler) ListQuestionsByCategory(c *gin.Context) {
-	idParam := c.Param("category_id")
+	// A rota registra o parametro como ":id" (category_router.go), nao
+	// "category_id". Ler o nome errado fazia uuid.Parse("") falhar e o
+	// endpoint sempre retornar 400.
+	idParam := c.Param("id")
 	categoryID, err := uuid.Parse(idParam)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Question ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Category ID"})
 		return
 	}
 

@@ -52,16 +52,19 @@ func NewContainer() *Container {
 	userHandler := handler.NewUserHandler(userUseCase)
 
 	categoryRepo := repository.NewCategoryRepository(db)
-	categoryUseCase := usecase.NewCategoryUseCase(categoryRepo)
-	CategoryHandler := handler.NewCategoryHandler(categoryUseCase)
 
 	answerRepo := repository.NewAnswerRepository(db)
 	answerUseCase := usecase.NewAnswerUseCase(answerRepo)
 	answerHandler := handler.NewAnswerHandler(answerUseCase)
 
+	// questionRepo precisa existir antes de CategoryUseCase, que depende
+	// dele para listar questoes por categoria (GetQuestionsByCategoryID).
 	questionRepo := repository.NewQuestionRepository(db)
 	questionUseCase := usecase.NewQuestionUseCase(questionRepo, answerRepo)
 	questionHandler := handler.NewQuestionHandler(questionUseCase)
+
+	categoryUseCase := usecase.NewCategoryUseCase(categoryRepo, questionRepo)
+	CategoryHandler := handler.NewCategoryHandler(categoryUseCase)
 
 	userScoreRepo := repository.NewUserScoreRepository(db)
 
