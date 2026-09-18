@@ -2,16 +2,29 @@ package usecase
 
 import (
 	"errors"
+	"math/rand"
 	"phishing-quest/adapter/repository"
 	"phishing-quest/domain"
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 // ErrConsentRequired e retornado quando o usuario tenta registrar uma
 // tentativa sem ter consentido em participar da coleta de dados.
 var ErrConsentRequired = errors.New("usuario precisa registrar consentimento antes de participar da coleta de dados")
+
+// experimentConditions e o desenho de 2 bracos do estudo principal
+// (ROADMAP_PESQUISA_2027.md, RQ1): feedback formativo por justificativa
+// vs. feedback binario simples. A atribuicao e aleatoria e feita pelo
+// SERVIDOR no momento do consentimento — o participante nunca escolhe
+// a propria condicao.
+var experimentConditions = []string{"feedback_formativo", "feedback_binario"}
+
+func assignCondition() string {
+	return experimentConditions[rand.Intn(len(experimentConditions))]
+}
 
 type AttemptUseCase struct {
 	attemptRepo repository.IAttemptRepository
@@ -75,24 +88,52 @@ func (auc *AttemptUseCase) ListAttemptsByUser(userID uuid.UUID) ([]*domain.Attem
 	return auc.attemptRepo.GetByUserID(userID)
 }
 
+// ConsentRequest reune os campos aceitos no consentimento — definido
+// no usecase (nao no dto) para o usecase nao depender do pacote dto,
+// mantendo a mesma direcao de dependencia usada no resto do projeto
+// (dto e consumido pelos handlers, nao pelos usecases).
+type ConsentRequest struct {
+	UserID           uuid.UUID
+	ConsentVersion   string
+	CohortID         *uuid.UUID
+	DemographicsJSON datatypes.JSON
+}
+
 // RegisterConsent registra o consentimento do usuario para participar
-// da coleta de dados. Idempotente: se o usuario ja consentiu, retorna
-// o registro existente em vez de tentar inserir de novo (o que
-// violaria a PK user_id) ou de tratar qualquer erro do Create como
-// "ja consentiu" — essa checagem explicita evita mascarar falhas
-// reais (ex.: erro de conexao com o banco) como sucesso.
-func (auc *AttemptUseCase) RegisterConsent(userID uuid.UUID) (participant *domain.StudyParticipant, alreadyConsented bool, err error) {
-	consented, err := auc.consentRepo.HasConsented(userID)
+// da coleta de dados, atribuindo uma condicao experimental aleatoria.
+// Idempotente: se o usuario ja consentiu (e ainda ativo), retorna o
+// registro existente em vez de tentar inserir de novo (o que violaria
+// a PK user_id) ou de tratar qualquer erro do Create como "ja
+// consentiu" — essa checagem explicita evita mascarar falhas reais
+// (ex.: erro de conexao com o banco) como sucesso.
+func (auc *AttemptUseCase) RegisterConsent(req ConsentRequest) (participant *domain.StudyParticipant, alreadyConsented bool, err error) {
+	consented, err := auc.consentRepo.HasConsented(req.UserID)
 	if err != nil {
 		return nil, false, err
 	}
 	if consented {
-		return &domain.StudyParticipant{UserId: userID}, true, nil
+		existing, err := auc.consentRepo.GetByUserID(req.UserID)
+		if err != nil {
+			return nil, false, err
+		}
+		return existing, true, nil
 	}
 
 	participant, err = auc.consentRepo.Create(&domain.StudyParticipant{
-		UserId:      userID,
-		ConsentedAt: time.Now(),
+		UserId:           req.UserID,
+		ConsentedAt:      time.Now(),
+		CohortId:         req.CohortID,
+		Condition:        assignCondition(),
+		ConsentVersion:   req.ConsentVersion,
+		DemographicsJSON: req.DemographicsJSON,
 	})
 	return participant, false, err
+}
+
+// WithdrawConsent registra a retirada de consentimento do participante
+// (direito de exclusao, LGPD). Tentativas ja coletadas nao sao
+// apagadas; apenas o participante e marcado inativo, o que bloqueia
+// novas tentativas via HasConsented.
+func (auc *AttemptUseCase) WithdrawConsent(userID uuid.UUID) error {
+	return auc.consentRepo.Withdraw(userID)
 }

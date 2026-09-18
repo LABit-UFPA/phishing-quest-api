@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 )
 
 // MockAttemptRepository implementa repository.IAttemptRepository.
@@ -77,6 +78,19 @@ func (m *MockStudyParticipantRepository) Create(participant *domain.StudyPartici
 func (m *MockStudyParticipantRepository) HasConsented(userID uuid.UUID) (bool, error) {
 	args := m.Called(userID)
 	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockStudyParticipantRepository) GetByUserID(userID uuid.UUID) (*domain.StudyParticipant, error) {
+	args := m.Called(userID)
+	if args.Get(0) != nil {
+		return args.Get(0).(*domain.StudyParticipant), args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *MockStudyParticipantRepository) Withdraw(userID uuid.UUID) error {
+	args := m.Called(userID)
+	return args.Error(0)
 }
 
 func newAttemptUseCaseWithMocks() (*usecase.AttemptUseCase, *MockAttemptRepository, *MockItemRepository, *MockStudyParticipantRepository) {
@@ -189,11 +203,16 @@ func TestAttemptUseCase_RegisterConsent_PrimeiraVez(t *testing.T) {
 	mockConsentRepo.On("HasConsented", userID).Return(false, nil)
 	mockConsentRepo.On("Create", mock.AnythingOfType("*domain.StudyParticipant")).Return(nil)
 
-	participant, alreadyConsented, err := uc.RegisterConsent(userID)
+	participant, alreadyConsented, err := uc.RegisterConsent(usecase.ConsentRequest{
+		UserID:         userID,
+		ConsentVersion: "v1",
+	})
 
 	assert.NoError(t, err)
 	assert.False(t, alreadyConsented)
 	assert.Equal(t, userID, participant.UserId)
+	// A condicao experimental e atribuida pelo servidor, nunca vazia.
+	assert.NotEmpty(t, participant.Condition)
 	mockConsentRepo.AssertExpectations(t)
 }
 
@@ -204,13 +223,19 @@ func TestAttemptUseCase_RegisterConsent_Idempotente(t *testing.T) {
 	uc, _, _, mockConsentRepo := newAttemptUseCaseWithMocks()
 
 	userID := uuid.New()
+	existing := &domain.StudyParticipant{UserId: userID, Condition: "feedback_binario"}
 	mockConsentRepo.On("HasConsented", userID).Return(true, nil)
+	mockConsentRepo.On("GetByUserID", userID).Return(existing, nil)
 
-	participant, alreadyConsented, err := uc.RegisterConsent(userID)
+	participant, alreadyConsented, err := uc.RegisterConsent(usecase.ConsentRequest{
+		UserID:         userID,
+		ConsentVersion: "v1",
+	})
 
 	assert.NoError(t, err)
 	assert.True(t, alreadyConsented)
 	assert.Equal(t, userID, participant.UserId)
+	assert.Equal(t, "feedback_binario", participant.Condition)
 	mockConsentRepo.AssertNotCalled(t, "Create", mock.Anything)
 }
 
@@ -220,11 +245,54 @@ func TestAttemptUseCase_RegisterConsent_PropagaErroRealDeConexao(t *testing.T) {
 	userID := uuid.New()
 	mockConsentRepo.On("HasConsented", userID).Return(false, assert.AnError)
 
-	participant, alreadyConsented, err := uc.RegisterConsent(userID)
+	participant, alreadyConsented, err := uc.RegisterConsent(usecase.ConsentRequest{
+		UserID:         userID,
+		ConsentVersion: "v1",
+	})
 
 	assert.Nil(t, participant)
 	assert.False(t, alreadyConsented)
 	assert.Error(t, err)
+}
+
+// TestAttemptUseCase_RegisterAttempt_RecusaAposWithdraw simula o
+// direito de exclusao (LGPD): apos WithdrawConsent, HasConsented deve
+// refletir que o participante nao esta mais ativo, bloqueando novas
+// tentativas.
+func TestAttemptUseCase_RegisterAttempt_RecusaAposWithdraw(t *testing.T) {
+	uc, mockAttemptRepo, mockItemRepo, mockConsentRepo := newAttemptUseCaseWithMocks()
+
+	userID := uuid.New()
+	mockConsentRepo.On("Withdraw", userID).Return(nil)
+	// Apos o withdraw, o repositorio real (via WHERE withdrawn_at IS NULL)
+	// passaria a responder false aqui — simulado explicitamente no mock.
+	mockConsentRepo.On("HasConsented", userID).Return(false, nil)
+
+	err := uc.WithdrawConsent(userID)
+	assert.NoError(t, err)
+
+	created, err := uc.RegisterAttempt(&domain.Attempt{
+		UserId:    userID,
+		ItemId:    uuid.New(),
+		SessionId: uuid.New(),
+		Action:    domain.ActionReport,
+	})
+
+	assert.Nil(t, created)
+	assert.ErrorIs(t, err, usecase.ErrConsentRequired)
+	mockItemRepo.AssertNotCalled(t, "GetByID", mock.Anything)
+	mockAttemptRepo.AssertNotCalled(t, "Create", mock.Anything)
+}
+
+func TestAttemptUseCase_WithdrawConsent_PropagaErroDoRepo(t *testing.T) {
+	uc, _, _, mockConsentRepo := newAttemptUseCaseWithMocks()
+
+	userID := uuid.New()
+	mockConsentRepo.On("Withdraw", userID).Return(gorm.ErrRecordNotFound)
+
+	err := uc.WithdrawConsent(userID)
+
+	assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
 }
 
 func TestAttemptUseCase_ListAttemptsByUser(t *testing.T) {

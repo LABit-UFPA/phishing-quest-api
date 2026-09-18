@@ -61,9 +61,11 @@ func (ah *AttemptHandler) ListAttemptsByUser(c *gin.Context) {
 }
 
 // RegisterConsent registra o consentimento do usuario para participar
-// da coleta de dados de pesquisa (POST /api/v1/auth/consent).
-// Idempotente: consentir de novo com o mesmo userId retorna sucesso
-// sem erro, em vez de expor a violacao de PK ao cliente.
+// da coleta de dados de pesquisa (POST /api/v1/auth/consent). O
+// servidor atribui a condicao experimental — o participante nunca
+// escolhe a propria condicao. Idempotente: consentir de novo com o
+// mesmo userId (enquanto ativo) retorna o registro existente, em vez
+// de expor a violacao de PK ao cliente.
 func (ah *AttemptHandler) RegisterConsent(c *gin.Context) {
 	var consentDTO dto.ConsentRequestDTO
 	if err := c.ShouldBindJSON(&consentDTO); err != nil {
@@ -71,16 +73,39 @@ func (ah *AttemptHandler) RegisterConsent(c *gin.Context) {
 		return
 	}
 
-	participant, alreadyConsented, err := ah.attemptUseCase.RegisterConsent(consentDTO.UserID)
+	participant, alreadyConsented, err := ah.attemptUseCase.RegisterConsent(usecase.ConsentRequest{
+		UserID:           consentDTO.UserID,
+		ConsentVersion:   consentDTO.ConsentVersion,
+		CohortID:         consentDTO.CohortID,
+		DemographicsJSON: consentDTO.DemographicsJSON,
+	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Error(err.Error()))
 		return
 	}
 
 	if alreadyConsented {
-		c.JSON(http.StatusOK, gin.H{"userId": participant.UserId, "alreadyConsented": true})
+		c.JSON(http.StatusOK, gin.H{"userId": participant.UserId, "condition": participant.Condition, "alreadyConsented": true})
 		return
 	}
 
 	c.JSON(http.StatusCreated, participant)
+}
+
+// WithdrawConsent registra a retirada de consentimento do participante
+// (direito de exclusao, LGPD). POST /api/v1/auth/consent/:id/withdraw.
+func (ah *AttemptHandler) WithdrawConsent(c *gin.Context) {
+	idParam := c.Param("id")
+	userID, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.Error(response.ErrInvalidIDFormat))
+		return
+	}
+
+	if err := ah.attemptUseCase.WithdrawConsent(userID); err != nil {
+		c.JSON(http.StatusInternalServerError, response.Error(err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusNoContent, nil)
 }
