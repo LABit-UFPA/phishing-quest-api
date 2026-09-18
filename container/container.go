@@ -119,7 +119,14 @@ func NewContainer() *Container {
 	itemUseCase := usecase.NewItemUseCase(itemRepo)
 	itemHandler := handler.NewItemHandler(itemUseCase)
 
-	itemSelectionUseCase := usecase.NewItemSelectionUseCase(itemRepo)
+	// userStatsRepo precisa existir antes de itemSelectionUseCase, que
+	// o usa para descobrir quais pistas o usuario ainda erra (selecao
+	// adaptativa, issue #28).
+	userStatsRepo := repository.NewUserStatsRepository(db)
+	userStatsUseCase := usecase.NewUserStatsUseCase(userStatsRepo)
+	userStatsHandler := handler.NewUserStatsHandler(userStatsUseCase)
+
+	itemSelectionUseCase := usecase.NewItemSelectionUseCase(itemRepo, userStatsRepo)
 	itemSelectionHandler := handler.NewItemSelectionHandler(itemSelectionUseCase)
 
 	cueRepo := repository.NewCueRepository(db)
@@ -150,10 +157,6 @@ func NewContainer() *Container {
 	researchExportRepo := repository.NewResearchExportRepository(db)
 	researchExportUseCase := usecase.NewResearchExportUseCase(researchExportRepo)
 	researchExportHandler := handler.NewResearchExportHandler(researchExportUseCase)
-
-	userStatsRepo := repository.NewUserStatsRepository(db)
-	userStatsUseCase := usecase.NewUserStatsUseCase(userStatsRepo)
-	userStatsHandler := handler.NewUserStatsHandler(userStatsUseCase)
 
 	return &Container{
 		DB:          db,

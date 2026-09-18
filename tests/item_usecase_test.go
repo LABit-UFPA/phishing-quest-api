@@ -68,6 +68,14 @@ func (m *MockItemRepository) CountSeenInSession(userID, sessionID uuid.UUID) (in
 	return args.Get(0).(int64), args.Get(1).(int64), args.Error(2)
 }
 
+func (m *MockItemRepository) GetRandomUnseenByCues(userID, sessionID uuid.UUID, cueIDs []uuid.UUID, isMalicious *bool) (*domain.Item, error) {
+	args := m.Called(userID, sessionID, cueIDs, isMalicious)
+	if args.Get(0) != nil {
+		return args.Get(0).(*domain.Item), args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 func (m *MockItemRepository) GetRandomUnseen(userID, sessionID uuid.UUID, isMalicious *bool) (*domain.Item, error) {
 	args := m.Called(userID, sessionID, isMalicious)
 	if args.Get(0) != nil {
