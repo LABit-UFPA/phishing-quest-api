@@ -25,6 +25,14 @@ func (m *MockUserStatsRepository) GetSignalDetectionAttempts(userID uuid.UUID) (
 	return nil, args.Error(1)
 }
 
+func (m *MockUserStatsRepository) GetCueMastery(userID uuid.UUID) ([]repository.CueMastery, error) {
+	args := m.Called(userID)
+	if args.Get(0) != nil {
+		return args.Get(0).([]repository.CueMastery), args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 func (m *MockUserStatsRepository) GetCueOutcomes(userID uuid.UUID) ([]repository.CueAttemptOutcome, error) {
 	args := m.Called(userID)
 	if args.Get(0) != nil {

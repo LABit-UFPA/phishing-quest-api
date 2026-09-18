@@ -21,6 +21,12 @@ type IItemRepository interface {
 	// nao respondeu na sessao informada, opcionalmente filtrado por
 	// IsMalicious. isMalicious == nil significa "qualquer".
 	GetRandomUnseen(userID, sessionID uuid.UUID, isMalicious *bool) (*domain.Item, error)
+
+	// GetRandomUnseenByCues e igual ao GetRandomUnseen, mas restrito a
+	// items que contenham AO MENOS UMA das pistas informadas. Usado
+	// pela selecao adaptativa (issue #28) para concentrar a pratica nas
+	// pistas que o usuario ainda erra.
+	GetRandomUnseenByCues(userID, sessionID uuid.UUID, cueIDs []uuid.UUID, isMalicious *bool) (*domain.Item, error)
 }
 
 type ItemRepository struct {
@@ -63,6 +69,35 @@ func (ir *ItemRepository) GetRandomUnseen(userID, sessionID uuid.UUID, isMalicio
 			SELECT item_id FROM phishing_quest.attempts
 			WHERE user_id = ? AND session_id = ?
 		)`, userID, sessionID)
+
+	if isMalicious != nil {
+		query = query.Where("is_malicious = ?", *isMalicious)
+	}
+
+	var item domain.Item
+	if err := query.Order("RANDOM()").First(&item).Error; err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
+func (ir *ItemRepository) GetRandomUnseenByCues(userID, sessionID uuid.UUID, cueIDs []uuid.UUID, isMalicious *bool) (*domain.Item, error) {
+	// Sem pistas para focar nao existe candidato adaptativo. Retornar
+	// ErrRecordNotFound (em vez de rodar um IN vazio, que o Postgres
+	// rejeita) deixa o usecase cair no fallback balanceado.
+	if len(cueIDs) == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	query := ir.db.Model(&domain.Item{}).
+		Where(`id NOT IN (
+			SELECT item_id FROM phishing_quest.attempts
+			WHERE user_id = ? AND session_id = ?
+		)`, userID, sessionID).
+		Where(`id IN (
+			SELECT item_id FROM phishing_quest.item_cues
+			WHERE cue_id IN ?
+		)`, cueIDs)
 
 	if isMalicious != nil {
 		query = query.Where("is_malicious = ?", *isMalicious)

@@ -19,7 +19,7 @@ func TestItemSelectionHandler_NextItem_Sucesso(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockItemRepo := new(MockItemRepository)
-	uc := usecase.NewItemSelectionUseCase(mockItemRepo)
+	uc := usecase.NewItemSelectionUseCase(mockItemRepo, new(MockUserStatsRepository))
 	h := handler.NewItemSelectionHandler(uc)
 
 	userID := uuid.New()
@@ -50,7 +50,7 @@ func TestItemSelectionHandler_NextItem_SemSessionId(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockItemRepo := new(MockItemRepository)
-	uc := usecase.NewItemSelectionUseCase(mockItemRepo)
+	uc := usecase.NewItemSelectionUseCase(mockItemRepo, new(MockUserStatsRepository))
 	h := handler.NewItemSelectionHandler(uc)
 
 	r := gin.New()
@@ -75,7 +75,7 @@ func TestItemSelectionHandler_NextItem_SemUserIdNoContexto(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockItemRepo := new(MockItemRepository)
-	uc := usecase.NewItemSelectionUseCase(mockItemRepo)
+	uc := usecase.NewItemSelectionUseCase(mockItemRepo, new(MockUserStatsRepository))
 	h := handler.NewItemSelectionHandler(uc)
 
 	r := gin.New()
@@ -93,7 +93,7 @@ func TestItemSelectionHandler_NextItem_SemItensDisponiveisRetorna404(t *testing.
 	gin.SetMode(gin.TestMode)
 
 	mockItemRepo := new(MockItemRepository)
-	uc := usecase.NewItemSelectionUseCase(mockItemRepo)
+	uc := usecase.NewItemSelectionUseCase(mockItemRepo, new(MockUserStatsRepository))
 	h := handler.NewItemSelectionHandler(uc)
 
 	userID := uuid.New()
