@@ -41,6 +41,10 @@ type Container struct {
 	RankingRepo    *repository.IRankingRepository
 	RankingUseCase *usecase.RankingUseCase
 	RankingHandler *handler.RankingHandler
+
+	ItemRepo    *repository.IItemRepository
+	ItemUseCase *usecase.ItemUseCase
+	ItemHandler *handler.ItemHandler
 }
 
 func NewContainer() *Container {
@@ -79,6 +83,10 @@ func NewContainer() *Container {
 	rankingUseCase := usecase.NewRankingUseCase(rankingRepo)
 	rankingHandler := handler.NewRankingHandler(rankingUseCase)
 
+	itemRepo := repository.NewItemRepository(db)
+	itemUseCase := usecase.NewItemUseCase(itemRepo)
+	itemHandler := handler.NewItemHandler(itemUseCase)
+
 	return &Container{
 		DB:          db,
 		JWTService:  jwtService,
@@ -110,5 +118,9 @@ func NewContainer() *Container {
 		RankingRepo:    &rankingRepo,
 		RankingUseCase: rankingUseCase,
 		RankingHandler: rankingHandler,
+
+		ItemRepo:    &itemRepo,
+		ItemUseCase: itemUseCase,
+		ItemHandler: itemHandler,
 	}
 }
