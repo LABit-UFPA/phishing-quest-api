@@ -97,7 +97,11 @@ func newAttemptUseCaseWithMocks() (*usecase.AttemptUseCase, *MockAttemptReposito
 	mockAttemptRepo := new(MockAttemptRepository)
 	mockItemRepo := new(MockItemRepository)
 	mockConsentRepo := new(MockStudyParticipantRepository)
-	uc := usecase.NewAttemptUseCase(mockAttemptRepo, mockItemRepo, mockConsentRepo)
+	// reviewScheduleUC = nil: o guard em AttemptUseCase.RegisterAttempt
+	// (auc.reviewScheduleUC != nil) torna a integracao com a fila de
+	// revisao Leitner opcional, permitindo testar RegisterAttempt de
+	// forma isolada sem precisar mockar o repositorio de item_cues.
+	uc := usecase.NewAttemptUseCase(mockAttemptRepo, mockItemRepo, mockConsentRepo, nil)
 	return uc, mockAttemptRepo, mockItemRepo, mockConsentRepo
 }
 
