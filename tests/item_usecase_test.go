@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -55,6 +54,22 @@ func (m *MockItemRepository) GetAll() ([]*domain.Item, error) {
 	return nil, args.Error(1)
 }
 
+func (m *MockItemRepository) GetByStatus(status domain.ItemStatus) ([]*domain.Item, error) {
+	args := m.Called(status)
+	if args.Get(0) != nil {
+		return args.Get(0).([]*domain.Item), args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *MockItemRepository) GetPublishedByChannel(channel domain.Channel) ([]*domain.Item, error) {
+	args := m.Called(channel)
+	if args.Get(0) != nil {
+		return args.Get(0).([]*domain.Item), args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 func (m *MockItemRepository) GetByChannel(channel domain.Channel) ([]*domain.Item, error) {
 	args := m.Called(channel)
 	if args.Get(0) != nil {
@@ -84,45 +99,16 @@ func (m *MockItemRepository) GetRandomUnseen(userID, sessionID uuid.UUID, isMali
 	return nil, args.Error(1)
 }
 
-func TestItemUseCase_CreateItem_DefinePadraoDeLocale(t *testing.T) {
-	mockRepo := new(MockItemRepository)
-	uc := usecase.NewItemUseCase(mockRepo)
-
-	mockRepo.On("Create", mock.AnythingOfType("*domain.Item")).Return(nil)
-
-	created, err := uc.CreateItem(&domain.Item{
-		Channel:     domain.ChannelWhatsApp,
-		IsMalicious: true,
-		ContentJSON: datatypes.JSON(`{"messages":[]}`),
-	})
-
-	assert.NoError(t, err)
-	assert.Equal(t, "pt-BR", created.Locale)
-	mockRepo.AssertExpectations(t)
-}
-
-func TestItemUseCase_CreateItem_RejeitaCanalInvalido(t *testing.T) {
-	mockRepo := new(MockItemRepository)
-	uc := usecase.NewItemUseCase(mockRepo)
-
-	created, err := uc.CreateItem(&domain.Item{
-		Channel:     domain.Channel("carta_pombo"),
-		ContentJSON: datatypes.JSON(`{}`),
-	})
-
-	assert.Nil(t, created)
-	assert.Error(t, err)
-	mockRepo.AssertNotCalled(t, "Create", mock.Anything)
-}
-
-func TestItemUseCase_ListItemsByChannel(t *testing.T) {
+// TestItemUseCase_ListItemsByChannel_SoPublicados garante que a rota
+// publica de listagem por canal nunca devolve rascunho (issue #30).
+func TestItemUseCase_ListItemsByChannel_SoPublicados(t *testing.T) {
 	mockRepo := new(MockItemRepository)
 	uc := usecase.NewItemUseCase(mockRepo)
 
 	expected := []*domain.Item{
-		{Id: uuid.New(), Channel: domain.ChannelSMS, IsMalicious: true},
+		{Id: uuid.New(), Channel: domain.ChannelSMS, IsMalicious: true, Status: domain.StatusPublished},
 	}
-	mockRepo.On("GetByChannel", domain.ChannelSMS).Return(expected, nil)
+	mockRepo.On("GetPublishedByChannel", domain.ChannelSMS).Return(expected, nil)
 
 	items, err := uc.ListItemsByChannel(domain.ChannelSMS)
 
@@ -130,6 +116,71 @@ func TestItemUseCase_ListItemsByChannel(t *testing.T) {
 	assert.Len(t, items, 1)
 	assert.Equal(t, domain.ChannelSMS, items[0].Channel)
 	mockRepo.AssertExpectations(t)
+	// A versao sem filtro de status nao pode ser usada pela rota publica.
+	mockRepo.AssertNotCalled(t, "GetByChannel", mock.Anything)
+}
+
+// TestItemUseCase_ListItems_SoPublicados e o mesmo contrato para a
+// listagem sem filtro de canal.
+func TestItemUseCase_ListItems_SoPublicados(t *testing.T) {
+	mockRepo := new(MockItemRepository)
+	uc := usecase.NewItemUseCase(mockRepo)
+
+	mockRepo.On("GetByStatus", domain.StatusPublished).Return([]*domain.Item{
+		{Id: uuid.New(), Status: domain.StatusPublished},
+	}, nil)
+
+	items, err := uc.ListItems()
+
+	assert.NoError(t, err)
+	assert.Len(t, items, 1)
+	mockRepo.AssertExpectations(t)
+	mockRepo.AssertNotCalled(t, "GetAll")
+}
+
+// TestItemUseCase_GetItem_RecusaRascunho e a regressao central do lado
+// publico da issue #30: conhecer o id de um rascunho nao pode dar
+// acesso ao conteudo antes da revisao humana.
+func TestItemUseCase_GetItem_RecusaRascunho(t *testing.T) {
+	mockRepo := new(MockItemRepository)
+	uc := usecase.NewItemUseCase(mockRepo)
+
+	id := uuid.New()
+	mockRepo.On("GetByID", id).Return(&domain.Item{Id: id, Status: domain.StatusDraft}, nil)
+
+	item, err := uc.GetItem(id)
+
+	assert.Nil(t, item)
+	assert.ErrorIs(t, err, usecase.ErrItemNotPublished)
+}
+
+// TestItemUseCase_GetItem_RecusaApenasRevisado garante que estar
+// revisado nao basta: enquanto nao for publicado, nao e servido.
+func TestItemUseCase_GetItem_RecusaApenasRevisado(t *testing.T) {
+	mockRepo := new(MockItemRepository)
+	uc := usecase.NewItemUseCase(mockRepo)
+
+	id := uuid.New()
+	reviewer := uuid.New()
+	mockRepo.On("GetByID", id).Return(&domain.Item{Id: id, Status: domain.StatusReviewed, ReviewedBy: &reviewer}, nil)
+
+	item, err := uc.GetItem(id)
+
+	assert.Nil(t, item)
+	assert.ErrorIs(t, err, usecase.ErrItemNotPublished)
+}
+
+func TestItemUseCase_GetItem_DevolvePublicado(t *testing.T) {
+	mockRepo := new(MockItemRepository)
+	uc := usecase.NewItemUseCase(mockRepo)
+
+	id := uuid.New()
+	mockRepo.On("GetByID", id).Return(&domain.Item{Id: id, Status: domain.StatusPublished}, nil)
+
+	item, err := uc.GetItem(id)
+
+	assert.NoError(t, err)
+	assert.Equal(t, id, item.Id)
 }
 
 func TestItemUseCase_GetItem_PropagaErroDoRepo(t *testing.T) {

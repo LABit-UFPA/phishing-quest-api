@@ -125,3 +125,73 @@ func TestReviewSchedule_ApplyResult_NaoPassaDaCaixaMaxima(t *testing.T) {
 
 	assert.Equal(t, domain.MaxLeitnerBox, rs.Box)
 }
+
+// TestItem_Publish_RecusaPularRevisao e o criterio de aceite da issue
+// #30 no nivel de dominio: nao existe caminho draft -> published. Item
+// errado ensina errado, entao a revisao humana e obrigatoria.
+func TestItem_Publish_RecusaPularRevisao(t *testing.T) {
+	item := &domain.Item{Id: uuid.New(), Status: domain.StatusDraft}
+
+	err := item.Publish(time.Now())
+
+	assert.ErrorIs(t, err, domain.ErrInvalidItemTransition)
+	assert.Equal(t, domain.StatusDraft, item.Status) // estado intacto
+	assert.Nil(t, item.PublishedAt)
+}
+
+func TestItem_MarkReviewed_RegistraRevisorEData(t *testing.T) {
+	item := &domain.Item{Id: uuid.New(), Status: domain.StatusDraft}
+	reviewerID := uuid.New()
+	now := time.Now()
+
+	err := item.MarkReviewed(reviewerID, now)
+
+	assert.NoError(t, err)
+	assert.Equal(t, domain.StatusReviewed, item.Status)
+	assert.NotNil(t, item.ReviewedBy)
+	assert.Equal(t, reviewerID, *item.ReviewedBy)
+	assert.NotNil(t, item.ReviewedAt)
+	assert.WithinDuration(t, now, *item.ReviewedAt, time.Second)
+}
+
+// TestItem_MarkReviewed_ExigeRevisorIdentificado garante que uma
+// revisao anonima (uuid zero) e recusada — sem isso o reviewed_by
+// perderia o sentido.
+func TestItem_MarkReviewed_ExigeRevisorIdentificado(t *testing.T) {
+	item := &domain.Item{Id: uuid.New(), Status: domain.StatusDraft}
+
+	err := item.MarkReviewed(uuid.Nil, time.Now())
+
+	assert.ErrorIs(t, err, domain.ErrReviewerRequired)
+	assert.Equal(t, domain.StatusDraft, item.Status)
+}
+
+func TestItem_Publish_AceitaItemRevisado(t *testing.T) {
+	reviewerID := uuid.New()
+	item := &domain.Item{Id: uuid.New(), Status: domain.StatusReviewed, ReviewedBy: &reviewerID}
+	now := time.Now()
+
+	err := item.Publish(now)
+
+	assert.NoError(t, err)
+	assert.Equal(t, domain.StatusPublished, item.Status)
+	assert.NotNil(t, item.PublishedAt)
+	assert.WithinDuration(t, now, *item.PublishedAt, time.Second)
+}
+
+// TestItem_MarkReviewed_NaoSobrescreveRevisaoAnterior garante que
+// revisar de novo um item ja revisado e recusado, preservando a
+// assinatura de quem revisou primeiro.
+func TestItem_MarkReviewed_NaoSobrescreveRevisaoAnterior(t *testing.T) {
+	revisorOriginal := uuid.New()
+	item := &domain.Item{
+		Id:         uuid.New(),
+		Status:     domain.StatusReviewed,
+		ReviewedBy: &revisorOriginal,
+	}
+
+	err := item.MarkReviewed(uuid.New(), time.Now())
+
+	assert.ErrorIs(t, err, domain.ErrInvalidItemTransition)
+	assert.Equal(t, revisorOriginal, *item.ReviewedBy)
+}

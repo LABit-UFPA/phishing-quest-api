@@ -48,6 +48,10 @@ type Container struct {
 	ItemSelectionUseCase *usecase.ItemSelectionUseCase
 	ItemSelectionHandler *handler.ItemSelectionHandler
 
+	ItemDraftService  service.IItemDraftService
+	ItemReviewUseCase *usecase.ItemReviewUseCase
+	ItemReviewHandler *handler.ItemReviewHandler
+
 	CueRepo     *repository.ICueRepository
 	ItemCueRepo *repository.IItemCueRepository
 	CueUseCase  *usecase.CueUseCase
@@ -118,6 +122,14 @@ func NewContainer() *Container {
 	itemRepo := repository.NewItemRepository(db)
 	itemUseCase := usecase.NewItemUseCase(itemRepo)
 	itemHandler := handler.NewItemHandler(itemUseCase)
+
+	// TemplateDraftService e o gerador default (local, sem chamada de
+	// rede). Para ligar um provedor de LLM real, basta trocar esta
+	// linha por uma implementacao de service.IItemDraftService — o
+	// portao de revisao humana continua valendo igual.
+	itemDraftService := service.NewTemplateDraftService()
+	itemReviewUseCase := usecase.NewItemReviewUseCase(itemRepo, itemDraftService)
+	itemReviewHandler := handler.NewItemReviewHandler(itemReviewUseCase)
 
 	// userStatsRepo precisa existir antes de itemSelectionUseCase, que
 	// o usa para descobrir quais pistas o usuario ainda erra (selecao
@@ -195,6 +207,10 @@ func NewContainer() *Container {
 		ItemHandler:          itemHandler,
 		ItemSelectionUseCase: itemSelectionUseCase,
 		ItemSelectionHandler: itemSelectionHandler,
+
+		ItemDraftService:  itemDraftService,
+		ItemReviewUseCase: itemReviewUseCase,
+		ItemReviewHandler: itemReviewHandler,
 
 		CueRepo:     &cueRepo,
 		ItemCueRepo: &itemCueRepo,
