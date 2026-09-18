@@ -50,6 +50,11 @@ type Container struct {
 	ItemCueRepo *repository.IItemCueRepository
 	CueUseCase  *usecase.CueUseCase
 	CueHandler  *handler.CueHandler
+
+	AttemptRepo    *repository.IAttemptRepository
+	ConsentRepo    *repository.IStudyParticipantRepository
+	AttemptUseCase *usecase.AttemptUseCase
+	AttemptHandler *handler.AttemptHandler
 }
 
 func NewContainer() *Container {
@@ -97,6 +102,11 @@ func NewContainer() *Container {
 	cueUseCase := usecase.NewCueUseCase(cueRepo, itemCueRepo, itemRepo)
 	cueHandler := handler.NewCueHandler(cueUseCase)
 
+	attemptRepo := repository.NewAttemptRepository(db)
+	consentRepo := repository.NewStudyParticipantRepository(db)
+	attemptUseCase := usecase.NewAttemptUseCase(attemptRepo, itemRepo, consentRepo)
+	attemptHandler := handler.NewAttemptHandler(attemptUseCase)
+
 	return &Container{
 		DB:          db,
 		JWTService:  jwtService,
@@ -137,5 +147,10 @@ func NewContainer() *Container {
 		ItemCueRepo: &itemCueRepo,
 		CueUseCase:  cueUseCase,
 		CueHandler:  cueHandler,
+
+		AttemptRepo:    &attemptRepo,
+		ConsentRepo:    &consentRepo,
+		AttemptUseCase: attemptUseCase,
+		AttemptHandler: attemptHandler,
 	}
 }
