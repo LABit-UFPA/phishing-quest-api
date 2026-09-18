@@ -24,5 +24,6 @@ func SetupRouter(cont *container.Container) *gin.Engine {
 	router.SetupItemRoutes(r, cont.ItemHandler)
 	router.SetupCueRoutes(r, cont.CueHandler)
 	router.SetupAttemptRoutes(r, cont.AttemptHandler, authRequired)
+	router.SetupTelemetryRoutes(r, cont.TelemetryHandler)
 	return r
 }
