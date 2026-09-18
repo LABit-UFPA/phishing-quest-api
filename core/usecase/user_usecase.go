@@ -3,6 +3,7 @@ package usecase
 import (
 	"errors"
 	"phishing-quest/adapter/repository"
+	"phishing-quest/core/service"
 	"phishing-quest/domain"
 	"phishing-quest/dto"
 	"time"
@@ -12,12 +13,17 @@ import (
 	"gorm.io/gorm"
 )
 
+// defaultUserRole e usada ate a issue #26 introduzir uma coluna de role
+// persistida em users. Todo usuario autenticado recebe essa role no token.
+const defaultUserRole = "player"
+
 type UserUseCase struct {
-	userRepo repository.IUserRepository
+	userRepo   repository.IUserRepository
+	jwtService service.IJWTService
 }
 
-func NewUserUseCase(userRepo repository.IUserRepository) *UserUseCase {
-	return &UserUseCase{userRepo: userRepo}
+func NewUserUseCase(userRepo repository.IUserRepository, jwtService service.IJWTService) *UserUseCase {
+	return &UserUseCase{userRepo: userRepo, jwtService: jwtService}
 }
 
 func (uc *UserUseCase) CreateUser(userRequest *domain.User) (*domain.User, error) {
@@ -67,7 +73,13 @@ func (uc *UserUseCase) Login(userRequest *dto.UserLoginDTO) (*dto.UserLoginRespo
 		return nil, errors.New("senha incorreta")
 	}
 
+	token, err := uc.jwtService.Generate(user.Id, defaultUserRole)
+	if err != nil {
+		return nil, errors.New("erro ao gerar token de autenticacao")
+	}
+
 	userResponse := &dto.UserLoginResponseDTO{
+		Token:      token,
 		Id:         user.Id,
 		Username:   user.Username,
 		Email:      user.Email,
