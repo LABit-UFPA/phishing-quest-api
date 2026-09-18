@@ -2,7 +2,9 @@ package usecase
 
 import (
 	"phishing-quest/adapter/repository"
-	"phishing-quest/domain"
+	"phishing-quest/dto"
+
+	"github.com/google/uuid"
 )
 
 type RankingUseCase struct {
@@ -13,11 +15,11 @@ func NewRankingUseCase(rankingRepo repository.IRankingRepository) *RankingUseCas
 	return &RankingUseCase{rankingRepo: rankingRepo}
 }
 
-func (ruc *RankingUseCase) GetGlobalRanking(limit, offset int) ([]domain.UserScore, error) {
-	ranking, err := ruc.rankingRepo.GetGlobalRanking(limit, offset)
-	if err != nil {
-		return nil, err
-	}
+func (ruc *RankingUseCase) GetGlobalRanking(limit, offset int) ([]dto.RankingEntryDTO, error) {
+	return ruc.rankingRepo.GetGlobalRanking(limit, offset)
+}
 
-	return ranking, nil
+// GetCohortRanking retorna o ranking restrito a uma coorte/turma.
+func (ruc *RankingUseCase) GetCohortRanking(cohortID uuid.UUID, limit, offset int) ([]dto.RankingEntryDTO, error) {
+	return ruc.rankingRepo.GetRankingByCohort(cohortID, limit, offset)
 }
