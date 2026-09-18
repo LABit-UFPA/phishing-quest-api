@@ -7,6 +7,7 @@ import (
 	"phishing-quest/dto"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type UserHandler struct {
@@ -49,13 +50,21 @@ func (uh *UserHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-// GetUser lida com a obtenção de um usuário pelo ID
+// GetUser busca um usuario pelo ID e responde com o formato seguro de
+// resposta (ToDTO), sem senha em texto puro nem hash.
 func (uh *UserHandler) GetUser(c *gin.Context) {
-	id := c.Param("id")
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
 
-	c.JSON(http.StatusOK, id)
-}
+	user, err := uh.UserUseCase.GetUser(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
 
-func (uh *UserHandler) GetTeste(c *gin.Context) {
-	c.JSON(http.StatusOK, "olhaaaaaa")
+	c.JSON(http.StatusOK, user.ToDTO())
 }

@@ -89,6 +89,10 @@ func (uc *UserUseCase) Login(userRequest *dto.UserLoginDTO) (*dto.UserLoginRespo
 	return userResponse, nil
 }
 
+func (uc *UserUseCase) GetUser(id uuid.UUID) (*domain.User, error) {
+	return uc.userRepo.GetByID(id)
+}
+
 func (uc *UserUseCase) UpdatePassword(user *domain.User, newPasswordHash string) {
 	user.PasswordHash = newPasswordHash
 	user.UpdatedAt = time.Now()
