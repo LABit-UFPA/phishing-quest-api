@@ -69,6 +69,10 @@ type Container struct {
 	ResearchExportRepo    *repository.IResearchExportRepository
 	ResearchExportUseCase *usecase.ResearchExportUseCase
 	ResearchExportHandler *handler.ResearchExportHandler
+
+	UserStatsRepo    *repository.IUserStatsRepository
+	UserStatsUseCase *usecase.UserStatsUseCase
+	UserStatsHandler *handler.UserStatsHandler
 }
 
 func NewContainer() *Container {
@@ -136,6 +140,10 @@ func NewContainer() *Container {
 	researchExportUseCase := usecase.NewResearchExportUseCase(researchExportRepo)
 	researchExportHandler := handler.NewResearchExportHandler(researchExportUseCase)
 
+	userStatsRepo := repository.NewUserStatsRepository(db)
+	userStatsUseCase := usecase.NewUserStatsUseCase(userStatsRepo)
+	userStatsHandler := handler.NewUserStatsHandler(userStatsUseCase)
+
 	return &Container{
 		DB:          db,
 		JWTService:  jwtService,
@@ -195,5 +203,9 @@ func NewContainer() *Container {
 		ResearchExportRepo:    &researchExportRepo,
 		ResearchExportUseCase: researchExportUseCase,
 		ResearchExportHandler: researchExportHandler,
+
+		UserStatsRepo:    &userStatsRepo,
+		UserStatsUseCase: userStatsUseCase,
+		UserStatsHandler: userStatsHandler,
 	}
 }

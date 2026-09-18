@@ -29,5 +29,6 @@ func SetupRouter(cont *container.Container) *gin.Engine {
 	router.SetupTelemetryRoutes(r, cont.TelemetryHandler)
 	router.SetupAssessmentRoutes(r, cont.AssessmentHandler, authRequired)
 	router.SetupResearchExportRoutes(r, cont.ResearchExportHandler, authRequired, requireResearcherRole)
+	router.SetupUserStatsRoutes(r, cont.UserStatsHandler, authRequired)
 	return r
 }
