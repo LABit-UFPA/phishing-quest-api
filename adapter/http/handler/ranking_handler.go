@@ -1,10 +1,12 @@
 package handler
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
+	"phishing-quest/adapter/http/response"
 	"phishing-quest/core/usecase"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
 )
 
 type RankingHandler struct {
@@ -21,7 +23,7 @@ func (rh *RankingHandler) GetGlobalRanking(c *gin.Context) {
 
 	ranking, err := rh.rankingUseCase.GetGlobalRanking(limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch ranking"})
+		c.JSON(http.StatusInternalServerError, response.Error("Failed to fetch ranking"))
 		return
 	}
 
