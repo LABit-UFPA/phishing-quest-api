@@ -15,6 +15,8 @@ func SetupRouter(cont *container.Container) *gin.Engine {
 
 	authRequired := middleware.AuthRequired(cont.JWTService)
 	requireResearcherRole := middleware.RequireRole(string(domain.RoleResearcher), string(domain.RoleAdmin))
+	// Curadoria de conteudo (criar/revisar/publicar item) — issue #30.
+	requireContentRole := middleware.RequireRole(string(domain.RoleAdmin), string(domain.RoleResearcher))
 
 	router.SetupUserRoutes(r, cont.UserHandler)
 	router.SetupCategoryRoutes(r, cont.CategoryHandler)
@@ -31,5 +33,6 @@ func SetupRouter(cont *container.Container) *gin.Engine {
 	router.SetupResearchExportRoutes(r, cont.ResearchExportHandler, authRequired, requireResearcherRole)
 	router.SetupUserStatsRoutes(r, cont.UserStatsHandler, authRequired)
 	router.SetupReviewScheduleRoutes(r, cont.ReviewScheduleHandler, authRequired)
+	router.SetupItemReviewRoutes(r, cont.ItemReviewHandler, authRequired, requireContentRole)
 	return r
 }

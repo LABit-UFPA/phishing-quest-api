@@ -18,22 +18,9 @@ func NewItemHandler(iuc *usecase.ItemUseCase) *ItemHandler {
 	return &ItemHandler{itemUseCase: iuc}
 }
 
-func (ih *ItemHandler) CreateItem(c *gin.Context) {
-	var itemDTO *domain.Item
-	if err := c.ShouldBindJSON(&itemDTO); err != nil {
-		c.JSON(http.StatusBadRequest, response.Error(err.Error()))
-		return
-	}
-
-	createdItem, err := ih.itemUseCase.CreateItem(itemDTO)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.Error(err.Error()))
-		return
-	}
-
-	c.JSON(http.StatusOK, createdItem)
-}
-
+// GetItem devolve um item publicado. Rascunhos e itens apenas
+// revisados respondem 404 aqui: quem revisa usa
+// GET /api/v1/admin/items/:id.
 func (ih *ItemHandler) GetItem(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
