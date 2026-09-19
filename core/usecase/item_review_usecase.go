@@ -33,6 +33,7 @@ func (iruc *ItemReviewUseCase) CreateDraft(itemRequest *domain.Item) (*domain.It
 		Locale:                     itemRequest.Locale,
 		PhishScaleCueCount:         itemRequest.PhishScaleCueCount,
 		PhishScalePremiseAlignment: itemRequest.PhishScalePremiseAlignment,
+		DifficultyEstimated:        itemRequest.DifficultyEstimated,
 		DifficultyCalibrated:       itemRequest.DifficultyCalibrated,
 		ContentJSON:                itemRequest.ContentJSON,
 		Explanation:                itemRequest.Explanation,

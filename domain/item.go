@@ -54,20 +54,27 @@ var ErrReviewerRequired = errors.New("revisao exige um revisor identificado")
 // front) para qualquer canal de golpe simulado. ContentJSON guarda o
 // conteudo especifico do canal (assunto+corpo, texto de SMS, etc).
 type Item struct {
-	Id                         uuid.UUID      `json:"id" gorm:"primaryKey"`
-	Channel                    Channel        `json:"channel" validate:"required,oneof=email sms whatsapp website phone_call pix_qr"`
-	IsMalicious                bool           `json:"isMalicious"`
-	Locale                     string         `json:"locale" validate:"required"`
-	PhishScaleCueCount         *int           `json:"phishScaleCueCount,omitempty"`
-	PhishScalePremiseAlignment *string        `json:"phishScalePremiseAlignment,omitempty"`
-	DifficultyCalibrated       *string        `json:"difficultyCalibrated,omitempty"`
-	ContentJSON                datatypes.JSON `json:"contentJson" validate:"required" gorm:"column:content_json"`
-	Explanation                string         `json:"explanation"`
-	Source                     string         `json:"source"`
-	Status                     ItemStatus     `json:"status" validate:"required,oneof=draft reviewed published"`
-	ReviewedBy                 *uuid.UUID     `json:"reviewedBy,omitempty"`
-	ReviewedAt                 *time.Time     `json:"reviewedAt,omitempty"`
-	PublishedAt                *time.Time     `json:"publishedAt,omitempty"`
+	Id                         uuid.UUID `json:"id" gorm:"primaryKey"`
+	Channel                    Channel   `json:"channel" validate:"required,oneof=email sms whatsapp website phone_call pix_qr"`
+	IsMalicious                bool      `json:"isMalicious"`
+	Locale                     string    `json:"locale" validate:"required"`
+	PhishScaleCueCount         *int      `json:"phishScaleCueCount,omitempty"`
+	PhishScalePremiseAlignment *string   `json:"phishScalePremiseAlignment,omitempty"`
+	// DifficultyEstimated e a priori (do gerador, phishforge-api #9);
+	// DifficultyCalibrated e a posteriori (medida a partir de attempts
+	// reais, issue #66). Colunas SEPARADAS de proposito -- ver
+	// migration V20260919140000 e issue #67: gravar a estimativa em
+	// DifficultyCalibrated sobrescreveria o dado que a calibracao
+	// deveria estar avaliando.
+	DifficultyEstimated  *string        `json:"difficultyEstimated,omitempty"`
+	DifficultyCalibrated *string        `json:"difficultyCalibrated,omitempty"`
+	ContentJSON          datatypes.JSON `json:"contentJson" validate:"required" gorm:"column:content_json"`
+	Explanation          string         `json:"explanation"`
+	Source               string         `json:"source"`
+	Status               ItemStatus     `json:"status" validate:"required,oneof=draft reviewed published"`
+	ReviewedBy           *uuid.UUID     `json:"reviewedBy,omitempty"`
+	ReviewedAt           *time.Time     `json:"reviewedAt,omitempty"`
+	PublishedAt          *time.Time     `json:"publishedAt,omitempty"`
 }
 
 func (i *Item) TableName() string {

@@ -76,6 +76,31 @@ func TestItemReviewUseCase_CreateDraft_RejeitaCanalInvalido(t *testing.T) {
 	mockRepo.AssertNotCalled(t, "Create", mock.Anything)
 }
 
+// TestItemReviewUseCase_CreateDraft_MantemEstimadaECalibradaSeparadas e
+// a regressao central da issue #67: DifficultyEstimated (a priori, do
+// gerador) e DifficultyCalibrated (a posteriori, medida a partir de
+// attempts reais -- issue #66) sao colunas distintas, e CreateDraft nao
+// pode conflar as duas ao copiar do request para o dominio.
+func TestItemReviewUseCase_CreateDraft_MantemEstimadaECalibradaSeparadas(t *testing.T) {
+	uc, mockRepo := newItemReviewUseCaseWithMocks()
+
+	mockRepo.On("Create", mock.AnythingOfType("*domain.Item")).Return(nil)
+
+	estimada := "hard"
+	calibrada := "medium"
+	created, err := uc.CreateDraft(&domain.Item{
+		Channel:              domain.ChannelEmail,
+		ContentJSON:          datatypes.JSON(`{"subject":"x"}`),
+		DifficultyEstimated:  &estimada,
+		DifficultyCalibrated: &calibrada,
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, &estimada, created.DifficultyEstimated)
+	assert.Equal(t, &calibrada, created.DifficultyCalibrated)
+	assert.NotEqual(t, created.DifficultyEstimated, created.DifficultyCalibrated)
+}
+
 // TestItemReviewUseCase_FluxoCompleto_RascunhoRevisadoPublicado cobre o
 // caminho felizes das 3 etapas do pipeline.
 func TestItemReviewUseCase_FluxoCompleto_RascunhoRevisadoPublicado(t *testing.T) {

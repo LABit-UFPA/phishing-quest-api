@@ -176,6 +176,67 @@ func TestIntegration_ItemReview_GeracaoEntraComoRascunho(t *testing.T) {
 	assert.Equal(t, generated.Id, pendentes[0].Id)
 }
 
+// TestIntegration_ItemReview_EstimadaECalibradaPersistemSeparadas cobre
+// a issue #67: difficulty_estimated (a priori, do gerador) e
+// difficulty_calibrated (a posteriori, medida a partir de attempts
+// reais -- issue #66) sao colunas distintas e precisam sobreviver ao
+// round-trip HTTP -> Postgres -> HTTP sem se confundirem.
+func TestIntegration_ItemReview_EstimadaECalibradaPersistemSeparadas(t *testing.T) {
+	resetDB(t)
+
+	_, _ = registerAndLogin(t, "curador4", "curador4@example.com")
+	promoteRole(t, "curador4@example.com", "admin")
+	adminToken := login(t, "curador4@example.com")
+
+	w := doJSON(t, http.MethodPost, "/api/v1/admin/items", adminToken, map[string]interface{}{
+		"channel":                    "email",
+		"isMalicious":                true,
+		"contentJson":                map[string]string{"subject": "x"},
+		"difficultyEstimated":        "hard",
+		"difficultyCalibrated":       "medium",
+		"phishScalePremiseAlignment": "high",
+	})
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	var created struct {
+		Id string `json:"id"`
+	}
+	decode(t, w, &created)
+
+	w = doJSON(t, http.MethodGet, "/api/v1/admin/items/"+created.Id, adminToken, nil)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var fetched struct {
+		DifficultyEstimated        *string `json:"difficultyEstimated"`
+		DifficultyCalibrated       *string `json:"difficultyCalibrated"`
+		PhishScalePremiseAlignment *string `json:"phishScalePremiseAlignment"`
+	}
+	decode(t, w, &fetched)
+
+	if assert.NotNil(t, fetched.DifficultyEstimated) {
+		assert.Equal(t, "hard", *fetched.DifficultyEstimated)
+	}
+	if assert.NotNil(t, fetched.DifficultyCalibrated) {
+		assert.Equal(t, "medium", *fetched.DifficultyCalibrated)
+	}
+	assert.NotEqual(t, fetched.DifficultyEstimated, fetched.DifficultyCalibrated,
+		"estimativa a priori e calibracao a posteriori nao podem se confundir na mesma coluna")
+}
+
+// TestIntegration_Migrations_ConstraintRejeitaDificuldadeForaDoVocabulario
+// prova que o vocabulario fechado (easy|medium|hard e low|medium|high)
+// e reforcado pelo banco, nao so por convencao em COMMENT (issue #67).
+func TestIntegration_Migrations_ConstraintRejeitaDificuldadeForaDoVocabulario(t *testing.T) {
+	resetDB(t)
+
+	err := testDB.Exec(`
+		INSERT INTO phishing_quest.items (id, channel, is_malicious, locale, content_json, difficulty_estimated)
+		VALUES (?, 'email', TRUE, 'pt-BR', '{}'::jsonb, 'dificil')`, uuid.NewString()).Error
+
+	assert.Error(t, err, "vocabulario em portugues (dificil) nao deveria passar no CHECK ingles (hard)")
+	assert.Contains(t, err.Error(), "chk_items_difficulty_estimated")
+}
+
 // TestIntegration_Migrations_ConstraintImpedePublicarSemRevisor prova que
 // a garantia nao depende so da aplicacao: o banco recusa a publicacao
 // sem revisor mesmo por SQL direto.
